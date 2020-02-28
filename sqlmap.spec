@@ -1,111 +1,48 @@
-# sitelib for noarch packages, sitearch for others (remove the unneeded one)
-%{!?__python2: %global __python2 %__python}
-%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%{!?python2_sitearch: %global python2_sitearch %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))")}
-
-%if 0%{?fedora}
-%bcond_without python3
-%else
-%bcond_with python3
-%endif
+%global pypi_name sqlmap
 
 Name:           sqlmap
-Version:        
+Version:        1.4.2
 Release:        1%{?dist}
-Summary:        
+Summary:        Automatic SQL injection and database takeover tool
 
-License:        
-URL:            
-Source0:        
+License:        GPLv2+ with exceptions
+URL:            http://sqlmap.org
+Source0:        https://files.pythonhosted.org/packages/source/s/%{pypi_name}/%{pypi_name}-%{version}.tar.gz
+BuildArch:      noarch
 
-BuildArch:      
-BuildRequires:  python2-devel
-%if %{with python3}
 BuildRequires:  python3-devel
-%endif # with python3
+BuildRequires:  python3dist(setuptools)
+BuildRequires:  /usr/bin/pathfix.py
 
 %description
-
-
-%if %{with python3}
-%package     -n 
-Summary:        
-
-%description -n 
-
-%endif # with python3
-
+Sqlmap is an open source penetration testing tool that automates the
+process of detecting and exploiting SQL injection flaws and taking over
+of database servers. It comes with a powerful detection engine, many
+niche features for the ultimate penetration tester and a broad range of
+switches lasting from database fingerprinting, over data fetching from
+the database, to accessing the underlying file system and executing
+commands on the operating system via out-of-band connections.
 
 %prep
-%autosetup -c
-mv %{name}-%{version} python2
+%autosetup -n %{pypi_name}-%{version}
+# Remove bundled egg-info
+rm -rf %{pypi_name}.egg-info
 
-%if %{with python3}
-cp -a python2 python3
-%endif # with python3
-
+pathfix.py -pni "%{__python3} %{py3_shbang_opts}" sqlmap/extra/shutils/duplicates.py
 
 %build
-pushd python2
-# Remove CFLAGS=... for noarch packages (unneeded)
-CFLAGS="$RPM_OPT_FLAGS" %{__python2} setup.py build
-popd
-
-%if %{with python3}
-pushd python3
-# Remove CFLAGS=... for noarch packages (unneeded)
-CFLAGS="$RPM_OPT_FLAGS" %{__python3} setup.py build
-popd
-%endif # with python3
-
+%py3_build
 
 %install
-rm -rf $RPM_BUILD_ROOT
-# Must do the python3 install first because the scripts in /usr/bin are
-# overwritten with every setup.py install (and we want the python2 version
-# to be the default for now).
-%if %{with python3}
-pushd python3
-%{__python3} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
-popd
-%endif # with python3
-
-pushd python2
-%{__python2} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT
-popd
-
-
-%check
-pushd python2
-%{__python2} setup.py test
-popd
-
-%if %{with python3}
-pushd python3
-%{__python3} setup.py test
-popd
-%endif
-
+%py3_install
 
 %files
-%license add-license-file-here
-%doc add-docs-here
-# For noarch packages: sitelib
-%{python2_sitelib}/*
-# For arch-specific packages: sitearch
-%{python2_sitearch}/*
-
-%if %{with python3}
-%files -n 
-%license add-license-file-here
-%doc add-docs-here
-# For noarch packages: sitelib
-%{python3_sitelib}/*
-# For arch-specific packages: sitearch
-%{python3_sitearch}/*
-%endif # with python3
-
+%license sqlmap/LICENSE sqlmap/thirdparty/socks/LICENSE sqlmap/thirdparty/identywaf/LICENSE
+%doc README.rst
+%{_bindir}/sqlmap
+%{python3_sitelib}/%{pypi_name}
+%{python3_sitelib}/%{pypi_name}-%{version}-py%{python3_version}.egg-info
 
 %changelog
-* Fri Feb 28 2020 Mattias Ohlsson <mattias.ohlsson@inprose.com>
-- 
+* Fri Feb 28 2020 Mattias Ohlsson <mattias.ohlsson@inprose.com> - 1.4.2-1
+- Initial build
